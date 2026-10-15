@@ -465,10 +465,9 @@
                 style="flex:1" oninput="autoSave();renderDocList();filterClients(this.value)"
                 onmousedown="event.stopPropagation();if(!_clientJustSelected)openClientSearch()"
                 onfocus="if(!_clientJustSelected)openClientSearch()"
-                onblur="setTimeout(closeClientSearch,200)"
                 onkeydown="if(event.key==='Escape'){closeClientSearch();this.blur();}">
             </div>
-            <div id="client-search-panel" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:var(--warm-white);border:1.5px solid var(--gold);border-radius:10px;box-shadow:0 8px 30px var(--shadow);margin-top:4px;max-height:200px;overflow-y:auto;">
+            <div id="client-search-panel" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:var(--warm-white);border:1.5px solid var(--gold);border-radius:10px;box-shadow:0 8px 30px var(--shadow);margin-top:4px;max-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
               <div id="client-results"></div>
             </div>
           </div>
@@ -932,29 +931,40 @@ function selectClient(item) {
   setVal("clientNom", item.nom);
   if (item.adresse) setVal("chantierAdresse", item.adresse);
   if (item.ville) { setVal("faitLieu", item.ville); }
+  // Fermer le panel et libérer le scroll AVANT le blur (important iOS)
   closeClientSearch();
-  // Blur l'input pour libérer le scroll
   const inp = document.getElementById("clientNom");
-  if (inp) inp.blur();
+  if (inp) { inp.blur(); }
   autoSave();
   showToast("✓ " + item.nom + " sélectionné");
-  setTimeout(() => { _clientJustSelected = false; }, 400);
+  setTimeout(() => { _clientJustSelected = false; }, 500);
 }
 
 let clientSearchOpen = false;
+// Bloque le scroll de la page quand le panel client est ouvert (fix iOS)
+function _lockBodyScroll() {
+  document.body.style.overflow = "hidden";
+  document.documentElement.style.overflow = "hidden";
+}
+function _unlockBodyScroll() {
+  document.body.style.overflow = "";
+  document.documentElement.style.overflow = "";
+}
 function openClientSearch() {
   if (_clientJustSelected) return;
   clientSearchOpen = true;
-  document.getElementById("client-search-panel").style.display = "";
+  const panel = document.getElementById("client-search-panel");
+  if (panel) panel.style.display = "";
   renderClientResults("");
 }
 function closeClientSearch() {
   clientSearchOpen = false;
+  _unlockBodyScroll();
   const panel = document.getElementById("client-search-panel");
   if (panel) {
     panel.style.display = "none";
     panel.style.pointerEvents = "none";
-    setTimeout(() => { panel.style.pointerEvents = ""; }, 300);
+    setTimeout(() => { if(panel) panel.style.pointerEvents = ""; }, 300);
   }
 }
 function filterClients(q) {
@@ -1329,12 +1339,21 @@ function removeFromLibrary(item,e){
   selectedTravaux=selectedTravaux.filter(i=>i!==item);
   renderTravauxTags(); renderLibraryItems(); autoSave();
 }
-document.addEventListener("click",e=>{
+function _handleOutsideClick(e){
   const w=document.getElementById("travaux-wrap"); if(w&&!w.contains(e.target))closeLibrary();
   const cs=document.getElementById("client-search-panel");
   const cn=document.getElementById("clientNom");
-  if(cs&&cn&&!cs.contains(e.target)&&e.target!==cn)closeClientSearch();
-});
+  if(cs&&cn&&!cs.contains(e.target)&&e.target!==cn) closeClientSearch();
+}
+document.addEventListener("click", _handleOutsideClick);
+// iOS: touchstart pour fermer le panel si on tape en dehors
+document.addEventListener("touchstart", function(e){
+  const cs=document.getElementById("client-search-panel");
+  const cn=document.getElementById("clientNom");
+  if(cs && cs.style.display!=="none" && cn && !cs.contains(e.target) && e.target!==cn){
+    closeClientSearch();
+  }
+}, {passive:true});
 
 function selectReception(val,silent){
   selectedReception=val;
