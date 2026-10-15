@@ -989,10 +989,7 @@ function renderClientResults(q) {
       : '<span style="font-size:0.65rem;background:var(--accent-light);color:var(--accent);border-radius:4px;padding:1px 5px;margin-left:4px;">Contact</span>';
     div.innerHTML = `<span style="flex:1;font-size:0.85rem">${escHtml(item.nom)}${badge}</span>`
       + (item.ville ? `<span style="font-size:0.75rem;color:var(--muted);margin-left:6px">${escHtml(item.ville)}</span>` : '');
-    // onmousedown preventDefault évite le blur/focus cycle sur l'input
-    div.onmousedown = (e) => { e.preventDefault(); };
     div.onclick = () => selectClient(item);
-    div.ontouchend = (e) => { e.preventDefault(); selectClient(item); };
     container.appendChild(div);
   });
   if (filtered.length > 30) {
@@ -1346,12 +1343,12 @@ function _handleOutsideClick(e){
   if(cs&&cn&&!cs.contains(e.target)&&e.target!==cn) closeClientSearch();
 }
 document.addEventListener("click", _handleOutsideClick);
-// iOS: touchstart pour fermer le panel si on tape en dehors
-document.addEventListener("touchstart", function(e){
+// iOS: touchend pour fermer le panel si on tape en dehors (touchstart interférait avec la sélection)
+document.addEventListener("touchend", function(e){
   const cs=document.getElementById("client-search-panel");
   const cn=document.getElementById("clientNom");
   if(cs && cs.style.display!=="none" && cn && !cs.contains(e.target) && e.target!==cn){
-    closeClientSearch();
+    setTimeout(closeClientSearch, 50);
   }
 }, {passive:true});
 
