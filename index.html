@@ -414,7 +414,7 @@
     
     <div class="brand-text">
       <div class="brand-sub">Procès-Verbal de Réception</div>
-      <span class="header-version">v4.82</span>
+      <span class="header-version">v4.83</span>
     </div>
   </div>
   <div class="header-actions">
@@ -844,9 +844,14 @@ function saveClientDB(db) { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
 function importPreloaded() {
   // Import initial data if DB is empty
   const db = getClientDB();
-  if (db.contacts.length === 0 && db.entreprises.length === 0) {
-    db.contacts = PRELOADED_CONTACTS;
-    db.entreprises = PRELOADED_ENTREPRISES;
+  // Fusion : ajoute les clients intégrés absents de la base locale (sans écraser l'existant)
+  const cIds = new Set(db.contacts.map(c => String(c.id)));
+  const eIds = new Set(db.entreprises.map(e => String(e.id)));
+  const newC = PRELOADED_CONTACTS.filter(c => !cIds.has(String(c.id)));
+  const newE = PRELOADED_ENTREPRISES.filter(e => !eIds.has(String(e.id)));
+  if (newC.length || newE.length) {
+    db.contacts = db.contacts.concat(newC);
+    db.entreprises = db.entreprises.concat(newE);
     db.lastImport = new Date().toISOString();
     saveClientDB(db);
   }
