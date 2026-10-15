@@ -414,7 +414,7 @@
     
     <div class="brand-text">
       <div class="brand-sub">Procès-Verbal de Réception</div>
-      <span class="header-version">v4.78</span>
+      <span class="header-version">v4.82</span>
     </div>
   </div>
   <div class="header-actions">
@@ -467,7 +467,7 @@
                 onfocus="if(!_clientJustSelected)openClientSearch()"
                 onkeydown="if(event.key==='Escape'){closeClientSearch();this.blur();}">
             </div>
-            <div id="client-search-panel" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:var(--warm-white);border:1.5px solid var(--gold);border-radius:10px;box-shadow:0 8px 30px var(--shadow);margin-top:4px;max-height:200px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
+            <div id="client-search-panel" style="display:none;position:fixed;z-index:9999;background:var(--warm-white);border:1.5px solid var(--gold);border-radius:10px;box-shadow:0 8px 30px var(--shadow);margin-top:0;max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;">
               <div id="client-results"></div>
             </div>
           </div>
@@ -950,11 +950,23 @@ function _unlockBodyScroll() {
   document.body.style.overflow = "";
   document.documentElement.style.overflow = "";
 }
+function _positionClientPanel() {
+  const panel = document.getElementById("client-search-panel");
+  const inp = document.getElementById("clientNom");
+  if (!panel || !inp) return;
+  const rect = inp.getBoundingClientRect();
+  panel.style.position = "fixed";
+  panel.style.top = (rect.bottom + 4) + "px";
+  panel.style.left = rect.left + "px";
+  panel.style.right = "auto";
+  panel.style.width = rect.width + "px";
+  panel.style.zIndex = "9999";
+}
 function openClientSearch() {
   if (_clientJustSelected) return;
   clientSearchOpen = true;
   const panel = document.getElementById("client-search-panel");
-  if (panel) panel.style.display = "";
+  if (panel) { panel.style.display = ""; _positionClientPanel(); }
   renderClientResults("");
 }
 function closeClientSearch() {
