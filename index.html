@@ -414,7 +414,7 @@
     
     <div class="brand-text">
       <div class="brand-sub">Procès-Verbal de Réception</div>
-      <span class="header-version">v4.83</span>
+      <span class="header-version">v4.84</span>
     </div>
   </div>
   <div class="header-actions">
@@ -1901,6 +1901,38 @@ document.addEventListener("DOMContentLoaded",()=>{
   const docs=getDocs(); docs.length>0?loadDoc(docs[0].id):newDoc();
   document.addEventListener("keydown",e=>{if(e.key==="Escape")closePreview();});
 });
+
+// ===== Détection de nouvelle version (bandeau de mise à jour) =====
+(function(){
+  const vEl = document.querySelector(".header-version");
+  const CURRENT = vEl ? vEl.textContent.trim() : "";
+  let shown = false;
+  function showBanner(v){
+    if (shown) return; shown = true;
+    const b = document.createElement("div");
+    b.id = "update-banner";
+    b.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:10000;background:#c8a96e;color:#1a1a2e;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));text-align:center;font-weight:600;font-size:0.9rem;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.2);";
+    b.textContent = "Nouvelle version disponible (" + v + ") — Toucher pour mettre à jour";
+    b.onclick = function(){
+      try { if (typeof autoSave === "function") autoSave(); } catch(e){}
+      location.replace(location.pathname + "?v=" + encodeURIComponent(v) + location.hash);
+    };
+    document.body.appendChild(b);
+  }
+  async function check(){
+    if (!CURRENT || shown) return;
+    try {
+      const r = await fetch(location.pathname + "?_=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) return;
+      const t = await r.text();
+      const m = t.match(/class="header-version">\s*(v[\d.]+)\s*</);
+      if (m && m[1] !== CURRENT) showBanner(m[1]);
+    } catch(e) {}
+  }
+  setTimeout(check, 3000);
+  setInterval(check, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) check(); });
+})();
 </script>
 </body>
 </html>
