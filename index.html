@@ -463,7 +463,10 @@
             <div style="display:flex;gap:8px;">
               <input class="form-input" id="clientNom" placeholder="M. ou Mme … ou 🔍 rechercher" autocomplete="off"
                 style="flex:1" oninput="autoSave();renderDocList();filterClients(this.value)"
-                onmousedown="event.stopPropagation();openClientSearch()" onfocus="openClientSearch()" onkeydown="if(event.key==='Escape')closeClientSearch()">
+                onmousedown="event.stopPropagation();if(!_clientJustSelected)openClientSearch()"
+                onfocus="if(!_clientJustSelected)openClientSearch()"
+                onblur="setTimeout(closeClientSearch,200)"
+                onkeydown="if(event.key==='Escape'){closeClientSearch();this.blur();}">
             </div>
             <div id="client-search-panel" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:60;background:var(--warm-white);border:1.5px solid var(--gold);border-radius:10px;box-shadow:0 8px 30px var(--shadow);margin-top:4px;max-height:200px;overflow-y:auto;">
               <div id="client-results"></div>
@@ -923,24 +926,36 @@ function importFromXlsx(file) {
   reader.readAsArrayBuffer(file);
 }
 
+let _clientJustSelected = false;
 function selectClient(item) {
+  _clientJustSelected = true;
   setVal("clientNom", item.nom);
   if (item.adresse) setVal("chantierAdresse", item.adresse);
   if (item.ville) { setVal("faitLieu", item.ville); }
   closeClientSearch();
+  // Blur l'input pour libérer le scroll
+  const inp = document.getElementById("clientNom");
+  if (inp) inp.blur();
   autoSave();
   showToast("✓ " + item.nom + " sélectionné");
+  setTimeout(() => { _clientJustSelected = false; }, 400);
 }
 
 let clientSearchOpen = false;
 function openClientSearch() {
+  if (_clientJustSelected) return;
   clientSearchOpen = true;
   document.getElementById("client-search-panel").style.display = "";
   renderClientResults("");
 }
 function closeClientSearch() {
   clientSearchOpen = false;
-  document.getElementById("client-search-panel").style.display = "none";
+  const panel = document.getElementById("client-search-panel");
+  if (panel) {
+    panel.style.display = "none";
+    panel.style.pointerEvents = "none";
+    setTimeout(() => { panel.style.pointerEvents = ""; }, 300);
+  }
 }
 function filterClients(q) {
   renderClientResults(q);
@@ -964,7 +979,10 @@ function renderClientResults(q) {
       : '<span style="font-size:0.65rem;background:var(--accent-light);color:var(--accent);border-radius:4px;padding:1px 5px;margin-left:4px;">Contact</span>';
     div.innerHTML = `<span style="flex:1;font-size:0.85rem">${escHtml(item.nom)}${badge}</span>`
       + (item.ville ? `<span style="font-size:0.75rem;color:var(--muted);margin-left:6px">${escHtml(item.ville)}</span>` : '');
+    // onmousedown preventDefault évite le blur/focus cycle sur l'input
+    div.onmousedown = (e) => { e.preventDefault(); };
     div.onclick = () => selectClient(item);
+    div.ontouchend = (e) => { e.preventDefault(); selectClient(item); };
     container.appendChild(div);
   });
   if (filtered.length > 30) {
